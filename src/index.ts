@@ -1,64 +1,20 @@
-import Fastify from 'fastify';
-import { Pool } from 'pg';
-import { randomUUID } from 'crypto';
+import express from "express";
 
-const fastify = Fastify({ logger: true });
+import { initializeDatabase } from "./database";
+import { processBlock } from "./controllers/blockController";
+import { getBalance } from "./controllers/balanceController";
+import { rollbackToHeight } from "./controllers/rollbackController";
 
-fastify.get('/', async (request, reply) => {
-  return { hello: 'world' };
-});
+const app = express();
+app.use(express.json());
 
-async function testPostgres(pool: Pool) {
-  const id = randomUUID();
-  const name = 'Satoshi';
-  const email = 'Nakamoto';
+app.post("/blocks", processBlock);
+app.get("/balance/:address", getBalance);
+app.post("/rollback", rollbackToHeight);
 
-  await pool.query(`DELETE FROM users;`);
+await initializeDatabase();
 
-  await pool.query(`
-    INSERT INTO users (id, name, email)
-    VALUES ($1, $2, $3);
-  `, [id, name, email]);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-  const { rows } = await pool.query(`
-    SELECT * FROM users;
-  `);
-
-  console.log('USERS', rows);
-}
-
-async function createTables(pool: Pool) {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL
-    );
-  `);
-}
-
-async function bootstrap() {
-  console.log('Bootstrapping...');
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required');
-  }
-
-  const pool = new Pool({
-    connectionString: databaseUrl
-  });
-
-  await createTables(pool);
-  await testPostgres(pool);
-}
-
-try {
-  await bootstrap();
-  await fastify.listen({
-    port: 3000,
-    host: '0.0.0.0'
-  })
-} catch (err) {
-  fastify.log.error(err)
-  process.exit(1)
-};
+export default app;
