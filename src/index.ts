@@ -1,6 +1,6 @@
 import express from "express";
 
-import { initializeDatabase } from "./database";
+import { initializeDatabase } from "./db/database";
 import { processBlock } from "./controllers/blockController";
 import { getBalance } from "./controllers/balanceController";
 import { rollbackToHeight } from "./controllers/rollbackController";

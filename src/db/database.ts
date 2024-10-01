@@ -20,34 +20,27 @@ const createTables = async () => {
 
   const transactionTable = `
     CREATE TABLE IF NOT EXISTS transactions (
-      id TEXT PRIMARY KEY,
-      block_id TEXT REFERENCES blocks(id),
-      UNIQUE (id, block_id) -- Ensure no duplicate transactions in a block
-    );
-  `;
-
-  const outputTable = `
-    CREATE TABLE IF NOT EXISTS outputs (
-      id SERIAL PRIMARY KEY,
-      tx_id TEXT REFERENCES transactions(id),
-      index INTEGER NOT NULL,
-      address TEXT NOT NULL,
-      value NUMERIC NOT NULL,
-      UNIQUE (tx_id, index) -- Ensure each output in a transaction is unique
+      id TEXT PRIMARY KEY,                              -- Transaction ID
+      block_id TEXT REFERENCES blocks(id),              -- Reference to the block it belongs to
+      tx_index INTEGER NOT NULL,                        -- Index of the transaction in the block
+      address TEXT NOT NULL,                            -- Address involved (sender/receiver)
+      value NUMERIC NOT NULL,                           -- Value (positive for output, negative for input)
+      input_ref_tx_id TEXT,                             -- Reference to previous transaction (for inputs)
+      input_ref_index INTEGER,                          -- Reference to output index in the previous transaction
+      UNIQUE (id, block_id, tx_index)                   -- Ensure no duplicate transactions
     );
   `;
 
   const balanceTable = `
     CREATE TABLE IF NOT EXISTS balances (
-      address TEXT PRIMARY KEY,
-      balance NUMERIC DEFAULT 0
+      address TEXT PRIMARY KEY,                         -- Address (unique)
+      balance NUMERIC DEFAULT 0                         -- Current balance of the address
     );
   `;
 
   try {
     await db.query(blockTable);
     await db.query(transactionTable);
-    await db.query(outputTable);
     await db.query(balanceTable);
     console.log("Tables created successfully");
   } catch (error) {
